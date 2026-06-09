@@ -1,7 +1,8 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { Routes, Route } from 'react-router-dom'
 import ProtectedRoute from './components/ProtectedRoute'
 import OfflineBanner from './components/OfflineBanner'
+import CallOverlay from './components/CallOverlay'
 import HomePage from './pages/HomePage'
 import ScanPage from './pages/ScanPage'
 import LoginPage from './pages/LoginPage'
@@ -18,10 +19,17 @@ import { requestNotificationPermission, onForegroundMessage } from './api/fireba
 import { registerDevice } from './api'
 import toast from 'react-hot-toast'
 
+interface IncomingCall {
+  channelId: string
+  token: string
+  carNickname: string
+}
+
 export default function App() {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated)
+  const [incomingCall, setIncomingCall] = useState<IncomingCall | null>(null)
 
-  // Register device token for push notifications once user is logged in
+  // Register FCM device token once authenticated
   useEffect(() => {
     if (!isAuthenticated) return
     requestNotificationPermission().then((token) => {
@@ -29,9 +37,22 @@ export default function App() {
     })
   }, [isAuthenticated])
 
-  // Show foreground push notifications as toasts
+  // Handle foreground FCM messages
   useEffect(() => {
     const unsub = onForegroundMessage((payload) => {
+      const data = payload.data ?? {}
+
+      // Incoming call → show CallOverlay instead of a toast
+      if (data.type === 'incoming_call' && data.channel_id && data.token) {
+        setIncomingCall({
+          channelId: data.channel_id,
+          token: data.token,
+          carNickname: data.car_nickname ?? 'your car',
+        })
+        return
+      }
+
+      // All other pushes (new message, scan notification) → toast
       const title = payload.notification?.title ?? 'ParkPing'
       const body = payload.notification?.body ?? ''
       toast(body ? `${title}: ${body}` : title, { icon: '🔔' })
@@ -39,9 +60,24 @@ export default function App() {
     return unsub
   }, [])
 
+  const appId = import.meta.env.VITE_AGORA_APP_ID ?? ''
+
   return (
     <>
       <OfflineBanner />
+
+      {/* Incoming call overlay — rendered on top of any route */}
+      {incomingCall && (
+        <CallOverlay
+          mode="incoming"
+          channelId={incomingCall.channelId}
+          token={incomingCall.token}
+          appId={appId}
+          carNickname={incomingCall.carNickname}
+          onClose={() => setIncomingCall(null)}
+        />
+      )}
+
       <Routes>
         <Route path="/" element={<HomePage />} />
         <Route path="/scan/:uuid" element={<ScanPage />} />

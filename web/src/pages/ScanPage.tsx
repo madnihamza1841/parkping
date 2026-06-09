@@ -1,18 +1,22 @@
 import { useEffect, useState } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import { useAuthStore } from '../store/authStore'
-import { startChat, scanCar } from '../api'
+import { startChat, scanCar, requestCallToken } from '../api'
 import Spinner from '../components/Spinner'
-import type { PublicCar } from '../types'
+import CallOverlay from '../components/CallOverlay'
+import type { PublicCar, CallToken } from '../types'
 
 export default function ScanPage() {
   const { uuid } = useParams<{ uuid: string }>()
   const navigate = useNavigate()
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated)
+
   const [car, setCar] = useState<PublicCar | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [starting, setStarting] = useState(false)
+  const [calling, setCalling] = useState(false)
+  const [activeCall, setActiveCall] = useState<CallToken | null>(null)
 
   useEffect(() => {
     if (!uuid) return
@@ -39,6 +43,19 @@ export default function ScanPage() {
     }
   }
 
+  async function handleCall() {
+    if (!uuid) return
+    setCalling(true)
+    try {
+      const { data } = await requestCallToken(uuid)
+      setActiveCall(data)
+    } catch {
+      setError('Could not start call. Try again.')
+    } finally {
+      setCalling(false)
+    }
+  }
+
   if (loading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -57,59 +74,75 @@ export default function ScanPage() {
   }
 
   return (
-    <div className="min-h-screen bg-background flex flex-col items-center justify-center p-6">
-      <div className="bg-surface rounded-2xl shadow-md max-w-sm w-full p-8 flex flex-col items-center gap-4">
-        <div className="w-20 h-20 bg-blue-50 rounded-full flex items-center justify-center text-4xl">🚗</div>
+    <>
+      {/* Active call overlay */}
+      {activeCall && (
+        <CallOverlay
+          mode="outgoing"
+          channelId={activeCall.channel_id}
+          token={activeCall.token}
+          appId={activeCall.app_id}
+          carNickname={car.nickname}
+          onClose={() => setActiveCall(null)}
+        />
+      )}
 
-        <div className="text-center">
-          <h1 className="text-2xl font-bold text-text-primary">{car.nickname}</h1>
-          <p className="text-text-secondary">{car.make} {car.model}</p>
+      <div className="min-h-screen bg-background flex flex-col items-center justify-center p-6">
+        <div className="bg-surface rounded-2xl shadow-md max-w-sm w-full p-8 flex flex-col items-center gap-4">
+          <div className="w-20 h-20 bg-blue-50 rounded-full flex items-center justify-center text-4xl">🚗</div>
+
+          <div className="text-center">
+            <h1 className="text-2xl font-bold text-text-primary">{car.nickname}</h1>
+            <p className="text-text-secondary">{car.make} {car.model}</p>
+          </div>
+
+          {isAuthenticated ? (
+            <div className="w-full flex flex-col gap-3 mt-2">
+              <button
+                onClick={handleMessage}
+                disabled={starting}
+                className="w-full bg-primary text-white rounded-xl py-3 font-semibold flex items-center justify-center gap-2 disabled:opacity-60"
+              >
+                {starting ? <Spinner size="sm" /> : '💬'} Send Message
+              </button>
+              <button
+                onClick={handleCall}
+                disabled={calling}
+                className="w-full border border-primary text-primary rounded-xl py-3 font-semibold flex items-center justify-center gap-2 disabled:opacity-60"
+              >
+                {calling ? <Spinner size="sm" /> : '📞'} Call Owner
+              </button>
+              {error && <p className="text-red-500 text-sm text-center">{error}</p>}
+            </div>
+          ) : (
+            <div className="w-full flex flex-col gap-3 mt-2 text-center">
+              <p className="text-text-secondary text-sm">
+                To contact this car owner, create a free account — it takes 30 seconds.
+              </p>
+              <Link
+                to={`/register?next=/scan/${uuid}`}
+                className="w-full bg-primary text-white rounded-xl py-3 font-semibold block text-center"
+              >
+                Create free account
+              </Link>
+              <Link
+                to={`/login?next=/scan/${uuid}`}
+                className="w-full border border-gray-200 text-text-secondary rounded-xl py-3 text-sm block text-center"
+              >
+                Already have an account? Login
+              </Link>
+            </div>
+          )}
+
+          <p className="text-xs text-gray-400 mt-2 text-center">
+            Owner's name, phone, and email are never shown.
+          </p>
         </div>
 
-        {isAuthenticated ? (
-          <div className="w-full flex flex-col gap-3 mt-2">
-            <button
-              onClick={handleMessage}
-              disabled={starting}
-              className="w-full bg-primary text-white rounded-xl py-3 font-semibold flex items-center justify-center gap-2 disabled:opacity-60"
-            >
-              {starting ? <Spinner size="sm" /> : '💬'} Send Message
-            </button>
-            <button
-              onClick={() => navigate(`/scan/${uuid}/call`)}
-              className="w-full border border-primary text-primary rounded-xl py-3 font-semibold"
-            >
-              📞 Call Owner
-            </button>
-          </div>
-        ) : (
-          <div className="w-full flex flex-col gap-3 mt-2 text-center">
-            <p className="text-text-secondary text-sm">
-              To contact this car owner, create a free account — it takes 30 seconds.
-            </p>
-            <Link
-              to={`/register?next=/scan/${uuid}`}
-              className="w-full bg-primary text-white rounded-xl py-3 font-semibold block text-center"
-            >
-              Create free account
-            </Link>
-            <Link
-              to={`/login?next=/scan/${uuid}`}
-              className="w-full border border-gray-200 text-text-secondary rounded-xl py-3 text-sm block text-center"
-            >
-              Already have an account? Login
-            </Link>
-          </div>
-        )}
-
-        <p className="text-xs text-gray-400 mt-2 text-center">
-          Owner's name, phone, and email are never shown.
-        </p>
+        <footer className="mt-8 text-center text-xs text-gray-400">
+          <a href="/" className="text-primary">ParkPing</a> — anonymous car contact
+        </footer>
       </div>
-
-      <footer className="mt-8 text-center text-xs text-gray-400">
-        <a href="/" className="text-primary">ParkPing</a> — anonymous car contact
-      </footer>
-    </div>
+    </>
   )
 }

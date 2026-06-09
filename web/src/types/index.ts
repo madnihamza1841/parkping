@@ -18,6 +18,7 @@ export interface PublicCar {
 
 export interface ChatThread {
   uuid: string
+  car_uuid: string
   car_nickname: string
   car_make: string
   car_model: string

@@ -17,6 +17,7 @@ class MessageSerializer(serializers.ModelSerializer):
 
 
 class ChatThreadSerializer(serializers.ModelSerializer):
+    car_uuid = serializers.UUIDField(source='car.uuid', read_only=True)
     car_nickname = serializers.CharField(source='car.nickname', read_only=True)
     car_make = serializers.CharField(source='car.make', read_only=True)
     car_model = serializers.CharField(source='car.model', read_only=True)
@@ -24,7 +25,7 @@ class ChatThreadSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = ChatThread
-        fields = ('uuid', 'car_nickname', 'car_make', 'car_model', 'created_at', 'is_active', 'last_message')
+        fields = ('uuid', 'car_uuid', 'car_nickname', 'car_make', 'car_model', 'created_at', 'is_active', 'last_message')
 
     def get_last_message(self, obj):
         msg = obj.messages.last()
