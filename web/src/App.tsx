@@ -1,3 +1,4 @@
+import { useEffect } from 'react'
 import { Routes, Route } from 'react-router-dom'
 import ProtectedRoute from './components/ProtectedRoute'
 import OfflineBanner from './components/OfflineBanner'
@@ -12,8 +13,32 @@ import ChatThreadPage from './pages/ChatThreadPage'
 import ProfilePage from './pages/ProfilePage'
 import NotFoundPage from './pages/NotFoundPage'
 import NavLayout from './components/NavLayout'
+import { useAuthStore } from './store/authStore'
+import { requestNotificationPermission, onForegroundMessage } from './api/firebase'
+import { registerDevice } from './api'
+import toast from 'react-hot-toast'
 
 export default function App() {
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated)
+
+  // Register device token for push notifications once user is logged in
+  useEffect(() => {
+    if (!isAuthenticated) return
+    requestNotificationPermission().then((token) => {
+      if (token) registerDevice(token, 'web').catch(() => {})
+    })
+  }, [isAuthenticated])
+
+  // Show foreground push notifications as toasts
+  useEffect(() => {
+    const unsub = onForegroundMessage((payload) => {
+      const title = payload.notification?.title ?? 'ParkPing'
+      const body = payload.notification?.body ?? ''
+      toast(body ? `${title}: ${body}` : title, { icon: '🔔' })
+    })
+    return unsub
+  }, [])
+
   return (
     <>
       <OfflineBanner />
