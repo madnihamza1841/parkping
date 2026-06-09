@@ -1,3 +1,17 @@
 from django.db import models
+from django.conf import settings
 
-# Create your models here.
+
+class DeviceToken(models.Model):
+    class Platform(models.TextChoices):
+        IOS = 'ios', 'iOS'
+        ANDROID = 'android', 'Android'
+        WEB = 'web', 'Web'
+
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='device_tokens')
+    token = models.TextField(unique=True)
+    platform = models.CharField(max_length=10, choices=Platform.choices)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f'{self.user.email} ({self.platform})'
