@@ -35,6 +35,8 @@ mobile/.flutter-plugins-dependencies
 mobile/build/
 mobile/.packages
 mobile/pubspec.lock
+mobile/android/app/google-services.json
+mobile/ios/Runner/GoogleService-Info.plist
 
 # React / Node
 web/node_modules/
