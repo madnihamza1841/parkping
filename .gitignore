@@ -27,6 +27,7 @@ staticfiles/
 # Firebase credentials
 serviceAccountKey.json
 firebase-adminsdk*.json
+*firebase-adminsdk*.json
 
 # Flutter
 mobile/.dart_tool/
