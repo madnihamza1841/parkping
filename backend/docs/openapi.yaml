@@ -1,0 +1,866 @@
+openapi: 3.0.3
+info:
+  title: ParkPing API
+  version: 1.0.0
+  description: Anonymous parking QR contact app API
+paths:
+  /api/auth/profile/:
+    get:
+      operationId: auth_profile_retrieve
+      tags:
+      - auth
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Profile'
+          description: ''
+    put:
+      operationId: auth_profile_update
+      tags:
+      - auth
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Profile'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/Profile'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/Profile'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Profile'
+          description: ''
+    patch:
+      operationId: auth_profile_partial_update
+      tags:
+      - auth
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedProfile'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedProfile'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedProfile'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Profile'
+          description: ''
+  /api/auth/profile/avatar/:
+    post:
+      operationId: auth_profile_avatar_create
+      tags:
+      - auth
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          description: No response body
+  /api/auth/register/:
+    post:
+      operationId: auth_register_create
+      tags:
+      - auth
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Register'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/Register'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/Register'
+        required: true
+      security:
+      - jwtAuth: []
+      - {}
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Register'
+          description: ''
+  /api/auth/token/:
+    post:
+      operationId: auth_token_create
+      description: |-
+        Takes a set of user credentials and returns an access and refresh JSON web
+        token pair to prove the authentication of those credentials.
+      tags:
+      - auth
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TokenObtainPair'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/TokenObtainPair'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/TokenObtainPair'
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenObtainPair'
+          description: ''
+  /api/auth/token/refresh/:
+    post:
+      operationId: auth_token_refresh_create
+      description: |-
+        Takes a refresh type JSON web token and returns an access type JSON web
+        token if the refresh token is valid.
+      tags:
+      - auth
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TokenRefresh'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/TokenRefresh'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/TokenRefresh'
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenRefresh'
+          description: ''
+  /api/call/status/{channel_id}/:
+    post:
+      operationId: call_status_create
+      parameters:
+      - in: path
+        name: channel_id
+        schema:
+          type: string
+        required: true
+      tags:
+      - call
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          description: No response body
+  /api/call/token/{car_uuid}/:
+    post:
+      operationId: call_token_create
+      parameters:
+      - in: path
+        name: car_uuid
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - call
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          description: No response body
+  /api/cars/:
+    get:
+      operationId: cars_list
+      tags:
+      - cars
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Car'
+          description: ''
+    post:
+      operationId: cars_create
+      tags:
+      - cars
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Car'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/Car'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/Car'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Car'
+          description: ''
+  /api/cars/{uuid}/:
+    get:
+      operationId: cars_retrieve
+      parameters:
+      - in: path
+        name: uuid
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - cars
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Car'
+          description: ''
+    put:
+      operationId: cars_update
+      parameters:
+      - in: path
+        name: uuid
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - cars
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Car'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/Car'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/Car'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Car'
+          description: ''
+    patch:
+      operationId: cars_partial_update
+      parameters:
+      - in: path
+        name: uuid
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - cars
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedCar'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedCar'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedCar'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Car'
+          description: ''
+    delete:
+      operationId: cars_destroy
+      parameters:
+      - in: path
+        name: uuid
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - cars
+      security:
+      - jwtAuth: []
+      responses:
+        '204':
+          description: No response body
+  /api/cars/{uuid}/qr/:
+    get:
+      operationId: cars_qr_retrieve
+      parameters:
+      - in: path
+        name: uuid
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - cars
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          description: No response body
+  /api/cars/{uuid}/qr/pdf/:
+    get:
+      operationId: cars_qr_pdf_retrieve
+      parameters:
+      - in: path
+        name: uuid
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - cars
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          description: No response body
+  /api/chat/{thread_id}/messages/:
+    get:
+      operationId: chat_messages_list
+      parameters:
+      - in: path
+        name: thread_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - chat
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Message'
+          description: ''
+    post:
+      operationId: chat_messages_create
+      parameters:
+      - in: path
+        name: thread_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - chat
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Message'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/Message'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/Message'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+          description: ''
+  /api/chat/start/{car_uuid}/:
+    post:
+      operationId: chat_start_create
+      parameters:
+      - in: path
+        name: car_uuid
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - chat
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          description: No response body
+  /api/chat/threads/:
+    get:
+      operationId: chat_threads_list
+      tags:
+      - chat
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ChatThread'
+          description: ''
+  /api/notifications/register-device/:
+    post:
+      operationId: notifications_register_device_create
+      tags:
+      - notifications
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          description: No response body
+  /api/scan/{car_uuid}/:
+    get:
+      operationId: scan_retrieve
+      parameters:
+      - in: path
+        name: car_uuid
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - scan
+      security:
+      - jwtAuth: []
+      - {}
+      responses:
+        '200':
+          description: No response body
+  /api/schema/:
+    get:
+      operationId: schema_retrieve
+      description: |-
+        OpenApi3 schema for this API. Format can be selected via content negotiation.
+
+        - YAML: application/vnd.oai.openapi
+        - JSON: application/vnd.oai.openapi+json
+      parameters:
+      - in: query
+        name: format
+        schema:
+          type: string
+          enum:
+          - json
+          - yaml
+      - in: query
+        name: lang
+        schema:
+          type: string
+          enum:
+          - af
+          - ar
+          - ar-dz
+          - ast
+          - az
+          - be
+          - bg
+          - bn
+          - br
+          - bs
+          - ca
+          - ckb
+          - cs
+          - cy
+          - da
+          - de
+          - dsb
+          - el
+          - en
+          - en-au
+          - en-gb
+          - eo
+          - es
+          - es-ar
+          - es-co
+          - es-mx
+          - es-ni
+          - es-ve
+          - et
+          - eu
+          - fa
+          - fi
+          - fr
+          - fy
+          - ga
+          - gd
+          - gl
+          - he
+          - hi
+          - hr
+          - hsb
+          - ht
+          - hu
+          - hy
+          - ia
+          - id
+          - ig
+          - io
+          - is
+          - it
+          - ja
+          - ka
+          - kab
+          - kk
+          - km
+          - kn
+          - ko
+          - ky
+          - lb
+          - lt
+          - lv
+          - mk
+          - ml
+          - mn
+          - mr
+          - ms
+          - my
+          - nb
+          - ne
+          - nl
+          - nn
+          - os
+          - pa
+          - pl
+          - pt
+          - pt-br
+          - ro
+          - ru
+          - sk
+          - sl
+          - sq
+          - sr
+          - sr-latn
+          - sv
+          - sw
+          - ta
+          - te
+          - tg
+          - th
+          - tk
+          - tr
+          - tt
+          - udm
+          - ug
+          - uk
+          - ur
+          - uz
+          - vi
+          - zh-hans
+          - zh-hant
+      tags:
+      - schema
+      security:
+      - jwtAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/vnd.oai.openapi:
+              schema:
+                type: object
+                additionalProperties: {}
+            application/yaml:
+              schema:
+                type: object
+                additionalProperties: {}
+            application/vnd.oai.openapi+json:
+              schema:
+                type: object
+                additionalProperties: {}
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+components:
+  schemas:
+    Car:
+      type: object
+      properties:
+        uuid:
+          type: string
+          format: uuid
+          readOnly: true
+        plate_number:
+          type: string
+          maxLength: 20
+        make:
+          type: string
+          maxLength: 100
+        model:
+          type: string
+          maxLength: 100
+        variant:
+          type: string
+          maxLength: 100
+        colour:
+          type: string
+          maxLength: 50
+        nickname:
+          type: string
+          maxLength: 100
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - colour
+      - created_at
+      - make
+      - model
+      - nickname
+      - plate_number
+      - uuid
+    ChatThread:
+      type: object
+      properties:
+        uuid:
+          type: string
+          format: uuid
+          readOnly: true
+        car_nickname:
+          type: string
+          readOnly: true
+        car_make:
+          type: string
+          readOnly: true
+        car_model:
+          type: string
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        is_active:
+          type: boolean
+        last_message:
+          type: string
+          readOnly: true
+      required:
+      - car_make
+      - car_model
+      - car_nickname
+      - created_at
+      - last_message
+      - uuid
+    Message:
+      type: object
+      properties:
+        uuid:
+          type: string
+          format: uuid
+          readOnly: true
+        sender_label:
+          type: string
+          readOnly: true
+        content:
+          type: string
+        timestamp:
+          type: string
+          format: date-time
+          readOnly: true
+        is_read:
+          type: boolean
+          readOnly: true
+        is_system:
+          type: boolean
+          readOnly: true
+      required:
+      - content
+      - is_read
+      - is_system
+      - sender_label
+      - timestamp
+      - uuid
+    PatchedCar:
+      type: object
+      properties:
+        uuid:
+          type: string
+          format: uuid
+          readOnly: true
+        plate_number:
+          type: string
+          maxLength: 20
+        make:
+          type: string
+          maxLength: 100
+        model:
+          type: string
+          maxLength: 100
+        variant:
+          type: string
+          maxLength: 100
+        colour:
+          type: string
+          maxLength: 50
+        nickname:
+          type: string
+          maxLength: 100
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+    PatchedProfile:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        email:
+          type: string
+          format: email
+          readOnly: true
+        full_name:
+          type: string
+          maxLength: 255
+        avatar:
+          type: string
+          format: uri
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+    Profile:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        email:
+          type: string
+          format: email
+          readOnly: true
+        full_name:
+          type: string
+          maxLength: 255
+        avatar:
+          type: string
+          format: uri
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - created_at
+      - email
+      - full_name
+      - id
+    Register:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+          maxLength: 254
+        password:
+          type: string
+          writeOnly: true
+        full_name:
+          type: string
+          maxLength: 255
+        date_of_birth:
+          type: string
+          format: date
+          nullable: true
+        phone_number:
+          type: string
+          maxLength: 20
+      required:
+      - email
+      - full_name
+      - password
+    TokenObtainPair:
+      type: object
+      properties:
+        email:
+          type: string
+          writeOnly: true
+        password:
+          type: string
+          writeOnly: true
+        access:
+          type: string
+          readOnly: true
+        refresh:
+          type: string
+          readOnly: true
+      required:
+      - access
+      - email
+      - password
+      - refresh
+    TokenRefresh:
+      type: object
+      properties:
+        access:
+          type: string
+          readOnly: true
+        refresh:
+          type: string
+      required:
+      - access
+      - refresh
+  securitySchemes:
+    jwtAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT

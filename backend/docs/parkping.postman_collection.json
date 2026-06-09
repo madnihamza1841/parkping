@@ -1,0 +1,251 @@
+{
+  "info": {
+    "name": "ParkPing API",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "description": "Anonymous parking QR contact app — complete API collection"
+  },
+  "variable": [
+    { "key": "base_url", "value": "http://localhost:8000" },
+    { "key": "access_token", "value": "" },
+    { "key": "refresh_token", "value": "" },
+    { "key": "car_uuid", "value": "" },
+    { "key": "thread_id", "value": "" },
+    { "key": "channel_id", "value": "" }
+  ],
+  "item": [
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Register",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/api/auth/register/",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"email\": \"user@example.com\", \"password\": \"StrongPass123!\", \"full_name\": \"Jane Doe\"}"
+            }
+          }
+        },
+        {
+          "name": "Login (get tokens)",
+          "event": [{
+            "listen": "test",
+            "script": {
+              "exec": [
+                "var json = pm.response.json();",
+                "pm.collectionVariables.set('access_token', json.access);",
+                "pm.collectionVariables.set('refresh_token', json.refresh);"
+              ]
+            }
+          }],
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/api/auth/token/",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"email\": \"user@example.com\", \"password\": \"StrongPass123!\"}"
+            }
+          }
+        },
+        {
+          "name": "Refresh token",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/api/auth/token/refresh/",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\"refresh\": \"{{refresh_token}}\"}" }
+          }
+        },
+        {
+          "name": "Get profile",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/auth/profile/",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }]
+          }
+        },
+        {
+          "name": "Update profile",
+          "request": {
+            "method": "PATCH",
+            "url": "{{base_url}}/api/auth/profile/",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{access_token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": { "mode": "raw", "raw": "{\"full_name\": \"Jane Smith\"}" }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Cars",
+      "item": [
+        {
+          "name": "List cars",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/cars/",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }]
+          }
+        },
+        {
+          "name": "Add car",
+          "event": [{
+            "listen": "test",
+            "script": {
+              "exec": [
+                "var json = pm.response.json();",
+                "pm.collectionVariables.set('car_uuid', json.uuid);"
+              ]
+            }
+          }],
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/api/cars/",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{access_token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"plate_number\": \"ABC123\", \"make\": \"Toyota\", \"model\": \"Corolla\", \"colour\": \"White\", \"nickname\": \"My White Car\"}"
+            }
+          }
+        },
+        {
+          "name": "Get QR image",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/cars/{{car_uuid}}/qr/",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }]
+          }
+        },
+        {
+          "name": "Get QR PDF",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/cars/{{car_uuid}}/qr/pdf/",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Scan (public)",
+      "item": [
+        {
+          "name": "Scan QR (no auth needed)",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/scan/{{car_uuid}}/"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Chat",
+      "item": [
+        {
+          "name": "Start chat",
+          "event": [{
+            "listen": "test",
+            "script": {
+              "exec": [
+                "var json = pm.response.json();",
+                "pm.collectionVariables.set('thread_id', json.uuid);"
+              ]
+            }
+          }],
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/api/chat/start/{{car_uuid}}/",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }]
+          }
+        },
+        {
+          "name": "List threads",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/chat/threads/",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }]
+          }
+        },
+        {
+          "name": "Send message",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/api/chat/{{thread_id}}/messages/",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{access_token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": { "mode": "raw", "raw": "{\"content\": \"Please move your car!\"}" }
+          }
+        },
+        {
+          "name": "Get messages",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/chat/{{thread_id}}/messages/",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Calls",
+      "item": [
+        {
+          "name": "Request call token",
+          "event": [{
+            "listen": "test",
+            "script": {
+              "exec": [
+                "var json = pm.response.json();",
+                "pm.collectionVariables.set('channel_id', json.channel_id);"
+              ]
+            }
+          }],
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/api/call/token/{{car_uuid}}/",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }]
+          }
+        },
+        {
+          "name": "Update call status",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/api/call/status/{{channel_id}}/",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{access_token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": { "mode": "raw", "raw": "{\"status\": \"answered\"}" }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Notifications",
+      "item": [
+        {
+          "name": "Register device token",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/api/notifications/register-device/",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{access_token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": { "mode": "raw", "raw": "{\"token\": \"your_fcm_token\", \"platform\": \"android\"}" }
+          }
+        }
+      ]
+    }
+  ]
+}
