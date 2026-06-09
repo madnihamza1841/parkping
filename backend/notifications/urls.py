@@ -1,2 +1,6 @@
 from django.urls import path
-urlpatterns = []
+from .views import RegisterDeviceView
+
+urlpatterns = [
+    path('register-device/', RegisterDeviceView.as_view(), name='notifications-register-device'),
+]
