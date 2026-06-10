@@ -5,6 +5,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 import '../../../core/api/api_client.dart';
+import '../../call/screens/outgoing_call_screen.dart';
 
 class ChatScreen extends StatefulWidget {
   final String threadId;
@@ -21,10 +22,15 @@ class _ChatScreenState extends State<ChatScreen> {
   final _storage = const FlutterSecureStorage();
   WebSocketChannel? _channel;
   bool _loading = true;
+  Map<String, dynamic>? _thread;
+
+  bool get _isBlocked => _thread?['is_blocked'] == true;
+  bool get _blockedByMe => _thread?['blocked_by_me'] == true;
 
   @override
   void initState() {
     super.initState();
+    _loadThread();
     _loadMessages().then((_) => _connectWs());
   }
 
@@ -34,6 +40,15 @@ class _ChatScreenState extends State<ChatScreen> {
     _input.dispose();
     _scroll.dispose();
     super.dispose();
+  }
+
+  Future<void> _loadThread() async {
+    try {
+      final resp = await ApiClient().dio.get('/api/chat/threads/');
+      final threads = List<Map<String, dynamic>>.from(resp.data as List);
+      final t = threads.where((t) => t['uuid'] == widget.threadId).firstOrNull;
+      if (t != null && mounted) setState(() => _thread = t);
+    } catch (_) {}
   }
 
   Future<void> _loadMessages() async {
@@ -56,6 +71,14 @@ class _ChatScreenState extends State<ChatScreen> {
     _channel = WebSocketChannel.connect(uri);
     _channel!.stream.listen((raw) {
       final data = jsonDecode(raw as String) as Map<String, dynamic>;
+      if (data['error'] == 'blocked') {
+        _loadThread();
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('You cannot contact this user.')));
+        }
+        return;
+      }
       setState(() => _messages.add(data));
       _scrollToBottom();
     });
@@ -70,19 +93,75 @@ class _ChatScreenState extends State<ChatScreen> {
 
   void _send() {
     final text = _input.text.trim();
-    if (text.isEmpty || _channel == null) return;
+    if (text.isEmpty || _channel == null || _isBlocked) return;
     _channel!.sink.add(jsonEncode({'content': text}));
     _input.clear();
+  }
+
+  Future<void> _toggleBlock() async {
+    final action = _blockedByMe ? 'unblock' : 'block';
+    try {
+      await ApiClient().dio.post('/api/chat/${widget.threadId}/$action/');
+      await _loadThread();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(_blockedByMe ? 'User blocked' : 'User unblocked')));
+      }
+    } catch (_) {}
+  }
+
+  void _startCall() {
+    final carUuid = _thread?['car_uuid'];
+    if (carUuid == null) return;
+    Navigator.push(context, MaterialPageRoute(
+      builder: (_) => OutgoingCallScreen(
+        carUuid: carUuid,
+        carNickname: _thread?['car_nickname'] ?? 'Car Owner',
+      ),
+    ));
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Chat')),
+      appBar: AppBar(
+        title: Text(_thread?['car_nickname'] ?? 'Chat'),
+        actions: [
+          if (!_isBlocked && _thread?['car_uuid'] != null)
+            IconButton(
+              key: const Key('chat_call_button'),
+              icon: const Icon(Icons.call),
+              onPressed: _startCall,
+            ),
+          PopupMenuButton<String>(
+            key: const Key('chat_menu'),
+            onSelected: (v) { if (v == 'block') _toggleBlock(); },
+            itemBuilder: (_) => [
+              PopupMenuItem(
+                value: 'block',
+                child: Text(_blockedByMe ? 'Unblock user' : 'Block user'),
+              ),
+            ],
+          ),
+        ],
+      ),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
           : Column(
               children: [
+                if (_isBlocked)
+                  Container(
+                    width: double.infinity,
+                    color: Colors.red[50],
+                    padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+                    child: Text(
+                      _blockedByMe
+                          ? 'You blocked this user. Unblock to resume.'
+                          : 'You cannot contact this user.',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(color: Colors.red[700], fontSize: 13),
+                    ),
+                  ),
                 Expanded(
                   child: ListView.builder(
                     controller: _scroll,
@@ -142,12 +221,19 @@ class _ChatScreenState extends State<ChatScreen> {
                     children: [
                       Expanded(
                         child: TextField(
+                          key: const Key('chat_input'),
                           controller: _input,
-                          decoration: const InputDecoration(hintText: 'Type a message...'),
+                          enabled: !_isBlocked,
+                          decoration: InputDecoration(
+                            hintText: _isBlocked ? 'Messaging unavailable' : 'Type a message...'),
                           onSubmitted: (_) => _send(),
                         ),
                       ),
-                      IconButton(icon: const Icon(Icons.send, color: Color(0xFF1A73E8)), onPressed: _send),
+                      IconButton(
+                        key: const Key('chat_send_button'),
+                        icon: Icon(Icons.send, color: _isBlocked ? Colors.grey : const Color(0xFF1A73E8)),
+                        onPressed: _isBlocked ? null : _send,
+                      ),
                     ],
                   ),
                 ),

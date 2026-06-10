@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/api/api_client.dart';
+import '../../call/screens/outgoing_call_screen.dart';
 
 class ContactScreen extends StatefulWidget {
   final String carUuid;
@@ -75,9 +76,12 @@ class _ContactScreenState extends State<ContactScreen> {
             const SizedBox(height: 12),
             OutlinedButton.icon(
               onPressed: () {
-                // Call flow handled in PR 12
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Calling — coming in PR 12')));
+                Navigator.push(context, MaterialPageRoute(
+                  builder: (_) => OutgoingCallScreen(
+                    carUuid: widget.carUuid,
+                    carNickname: _car?['nickname'] ?? 'Car Owner',
+                  ),
+                ));
               },
               icon: const Icon(Icons.call),
               label: const Text('Call Owner'),

@@ -5,9 +5,9 @@ Anonymous parking QR contact app — Flutter front-end.
 ## Setup
 
 ### Prerequisites
-- Flutter 3.19+
-- Dart 3.3+
-- Android Studio / Xcode for device simulators
+- Flutter 3.44+
+- Dart 3.6+
+- Android SDK 34+ with JDK 17 (or Xcode for iOS)
 
 ### Steps
 
@@ -18,6 +18,15 @@ cp .env.example .env
 
 flutter pub get
 flutter run
+```
+
+### Testing
+
+```bash
+flutter analyze         # static analysis — must report 0 issues
+flutter test            # 26 widget tests: auth validation, cars/threads
+                        # states, call screen controls, onboarding flow
+flutter build apk --debug   # full Android build check
 ```
 
 ### Environment Variables

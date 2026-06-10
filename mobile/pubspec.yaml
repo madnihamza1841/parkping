@@ -32,11 +32,10 @@ dependencies:
   firebase_messaging: ^14.9.1
 
   # VoIP
-  agora_rtc_engine: ^6.3.2
+  agora_rtc_engine: ^6.5.2
 
   # UI helpers
   cached_network_image: ^3.3.1
-  fluttertoast: ^8.2.5
   connectivity_plus: ^6.0.3
   shimmer: ^3.0.0
   shared_preferences: ^2.2.3
@@ -56,7 +55,7 @@ dev_dependencies:
 
 flutter_launcher_icons:
   android: true
-  ios: true
+  ios: false  # enable once the full iOS Runner.xcodeproj structure exists
   image_path: 'assets/icon.png'
   min_sdk_android: 21
 

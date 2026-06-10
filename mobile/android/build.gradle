@@ -10,6 +10,20 @@ subprojects {
     project.buildDir = "${rootProject.buildDir}/${project.name}"
 }
 subprojects {
+    // Some plugins (agora_rtc_engine) pin an old compileSdk that breaks
+    // against modern androidx releases — force a current one after the
+    // plugin's own script has run.
+    afterEvaluate { p ->
+        if (p.hasProperty('android')) {
+            try {
+                p.android.compileSdk = 36
+            } catch (Exception ignored) {
+                p.android.compileSdkVersion 36
+            }
+        }
+    }
+}
+subprojects {
     project.evaluationDependsOn(':app')
 }
 
