@@ -82,6 +82,7 @@ class _ActiveCallScreenState extends State<ActiveCallScreen> {
                   onTap: () => setState(() => _muted = !_muted),
                 ),
                 FloatingActionButton(
+                  heroTag: 'end_active_call',
                   backgroundColor: Colors.red,
                   onPressed: _endCall,
                   child: const Icon(Icons.call_end, size: 32),

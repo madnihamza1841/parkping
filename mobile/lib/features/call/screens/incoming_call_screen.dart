@@ -35,6 +35,7 @@ class IncomingCallScreen extends StatelessWidget {
               children: [
                 Column(children: [
                   FloatingActionButton(
+                    heroTag: 'decline_call',
                     backgroundColor: Colors.red,
                     onPressed: () async {
                       await ApiClient().dio.post('/api/call/status/$channelId/', data: {'status': 'declined'});
@@ -47,6 +48,7 @@ class IncomingCallScreen extends StatelessWidget {
                 ]),
                 Column(children: [
                   FloatingActionButton(
+                    heroTag: 'accept_call',
                     backgroundColor: Colors.green,
                     onPressed: () => Navigator.pushReplacement(context, MaterialPageRoute(
                       builder: (_) => ActiveCallScreen(channelId: channelId, token: token, appId: appId, carNickname: carNickname),

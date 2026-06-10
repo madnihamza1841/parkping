@@ -59,6 +59,7 @@ class _OutgoingCallScreenState extends State<OutgoingCallScreen> {
             if (_error != null) Text(_error!, style: const TextStyle(color: Colors.red)),
             const Spacer(),
             FloatingActionButton(
+              heroTag: 'cancel_outgoing_call',
               backgroundColor: Colors.red,
               onPressed: () => Navigator.pop(context),
               child: const Icon(Icons.call_end),
