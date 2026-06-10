@@ -1,32 +1,31 @@
 import { useEffect, useRef, useState, FormEvent } from 'react'
 import { useParams } from 'react-router-dom'
-import { getMessages, getThreads, requestCallToken } from '../api'
+import { getMessages, getThreads, requestCallToken, blockUser, unblockUser } from '../api'
 import Spinner from '../components/Spinner'
 import CallOverlay from '../components/CallOverlay'
-import type { Message, CallToken } from '../types'
+import toast from 'react-hot-toast'
+import type { Message, CallToken, ChatThread } from '../types'
 
 export default function ChatThreadPage() {
   const { threadId } = useParams<{ threadId: string }>()
   const [messages, setMessages] = useState<Message[]>([])
   const [loading, setLoading] = useState(true)
   const [input, setInput] = useState('')
-  const [carUuid, setCarUuid] = useState<string | null>(null)
-  const [carNickname, setCarNickname] = useState('')
+  const [thread, setThread] = useState<ChatThread | null>(null)
   const [activeCall, setActiveCall] = useState<CallToken | null>(null)
   const [calling, setCalling] = useState(false)
   const wsRef = useRef<WebSocket | null>(null)
   const bottomRef = useRef<HTMLDivElement>(null)
 
-  // Fetch thread metadata to get car UUID for calls
-  useEffect(() => {
-    getThreads().then((r) => {
-      const thread = (r.data as Array<Record<string, string>>).find((t) => t.uuid === threadId)
-      if (thread) {
-        setCarUuid(thread.car_uuid ?? null)
-        setCarNickname(thread.car_nickname ?? '')
-      }
-    }).catch(() => {})
-  }, [threadId])
+  async function refreshThread() {
+    try {
+      const r = await getThreads()
+      const t = (r.data as ChatThread[]).find((x) => x.uuid === threadId)
+      if (t) setThread(t)
+    } catch { /* non-fatal */ }
+  }
+
+  useEffect(() => { refreshThread() }, [threadId])
 
   useEffect(() => {
     if (!threadId) return
@@ -41,8 +40,13 @@ export default function ChatThreadPage() {
     wsRef.current = ws
 
     ws.onmessage = (e) => {
-      const data = JSON.parse(e.data) as Message
-      setMessages((prev) => [...prev, data])
+      const data = JSON.parse(e.data)
+      if (data.error === 'blocked') {
+        toast.error('You cannot contact this user.')
+        refreshThread()
+        return
+      }
+      setMessages((prev) => [...prev, data as Message])
     }
 
     return () => ws.close()
@@ -60,19 +64,40 @@ export default function ChatThreadPage() {
   }
 
   async function handleCall() {
-    if (!carUuid) return
+    if (!thread?.car_uuid) return
     setCalling(true)
     try {
-      const { data } = await requestCallToken(carUuid)
+      const { data } = await requestCallToken(thread.car_uuid)
       setActiveCall(data)
     } catch {
-      // silently ignore — user will see no overlay
+      toast.error('Could not start call.')
     } finally {
       setCalling(false)
     }
   }
 
+  async function handleBlockToggle() {
+    if (!threadId || !thread) return
+    try {
+      if (thread.blocked_by_me) {
+        await unblockUser(threadId)
+        toast.success('User unblocked')
+      } else {
+        if (!confirm('Block this user? They will no longer be able to message or call you.')) return
+        await blockUser(threadId)
+        toast.success('User blocked')
+      }
+      await refreshThread()
+    } catch {
+      toast.error('Action failed')
+    }
+  }
+
   if (loading) return <div className="flex justify-center py-20"><Spinner size="lg" /></div>
+
+  const expiresIn = thread?.expires_at
+    ? Math.max(0, Math.round((new Date(thread.expires_at).getTime() - Date.now()) / 3600000))
+    : null
 
   return (
     <>
@@ -82,25 +107,47 @@ export default function ChatThreadPage() {
           channelId={activeCall.channel_id}
           token={activeCall.token}
           appId={import.meta.env.VITE_AGORA_APP_ID ?? ''}
-          carNickname={carNickname}
+          carNickname={thread?.car_nickname ?? ''}
           onClose={() => setActiveCall(null)}
         />
       )}
 
       <div className="flex flex-col h-[calc(100vh-140px)]">
-        {/* Header with call button */}
+        {/* Header */}
         <div className="flex items-center justify-between pb-3 border-b border-gray-100 mb-2">
-          <p className="font-semibold text-text-primary">{carNickname || 'Chat'}</p>
-          {carUuid && (
+          <div>
+            <p className="font-semibold text-text-primary">{thread?.car_nickname || 'Chat'}</p>
+            {expiresIn !== null && !thread?.is_blocked && (
+              <p className="text-xs text-gray-400">Chat disappears in ~{expiresIn}h</p>
+            )}
+          </div>
+          <div className="flex items-center gap-4">
+            {thread?.car_uuid && !thread.is_blocked && (
+              <button
+                onClick={handleCall}
+                disabled={calling}
+                className="flex items-center gap-1 text-primary text-sm font-medium disabled:opacity-50"
+              >
+                {calling ? <Spinner size="sm" /> : '📞'} Call
+              </button>
+            )}
             <button
-              onClick={handleCall}
-              disabled={calling}
-              className="flex items-center gap-1 text-primary text-sm font-medium disabled:opacity-50"
+              onClick={handleBlockToggle}
+              className={`text-sm font-medium ${thread?.blocked_by_me ? 'text-primary' : 'text-red-500'}`}
             >
-              {calling ? <Spinner size="sm" /> : '📞'} Call
+              {thread?.blocked_by_me ? 'Unblock' : 'Block'}
             </button>
-          )}
+          </div>
         </div>
+
+        {/* Blocked banner */}
+        {thread?.is_blocked && (
+          <div className="bg-red-50 text-red-600 text-sm text-center rounded-xl py-2 px-4 mb-2">
+            {thread.blocked_by_me
+              ? 'You blocked this user. Unblock to resume the conversation.'
+              : 'You cannot contact this user.'}
+          </div>
+        )}
 
         <div className="flex-1 overflow-y-auto flex flex-col gap-2 pb-4">
           {messages.map((msg) => {
@@ -132,10 +179,17 @@ export default function ChatThreadPage() {
         <form onSubmit={handleSend} className="flex gap-2 pt-3 border-t border-gray-100">
           <input
             value={input} onChange={(e) => setInput(e.target.value)}
-            placeholder="Type a message..."
-            className="flex-1 border border-gray-200 rounded-xl px-4 py-2 text-sm focus:outline-none focus:border-primary"
+            placeholder={thread?.is_blocked ? 'Messaging unavailable' : 'Type a message...'}
+            disabled={thread?.is_blocked}
+            className="flex-1 border border-gray-200 rounded-xl px-4 py-2 text-sm focus:outline-none focus:border-primary disabled:bg-gray-50"
           />
-          <button type="submit" className="bg-primary text-white rounded-xl px-4 py-2 text-sm font-medium">Send</button>
+          <button
+            type="submit"
+            disabled={thread?.is_blocked}
+            className="bg-primary text-white rounded-xl px-4 py-2 text-sm font-medium disabled:opacity-50"
+          >
+            Send
+          </button>
         </form>
       </div>
     </>

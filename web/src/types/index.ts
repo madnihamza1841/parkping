@@ -25,6 +25,9 @@ export interface ChatThread {
   created_at: string
   is_active: boolean
   last_message: { content: string; timestamp: string } | null
+  expires_at: string
+  blocked_by_me: boolean
+  is_blocked: boolean
 }
 
 export interface Message {

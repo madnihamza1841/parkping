@@ -1,9 +1,10 @@
+from django.conf import settings
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
-from rest_framework.exceptions import NotFound
+from rest_framework.exceptions import NotFound, PermissionDenied
 from cars.models import Car
-from chat.models import ChatThread, Message
+from chat.models import ChatThread, Message, Block
 from .models import CallLog
 from .agora_utils import generate_call_tokens, random_channel_id
 
@@ -25,16 +26,22 @@ def _send_incoming_call_push(owner, channel_id, token_b, car):
 class CallTokenView(APIView):
     def post(self, request, car_uuid):
         try:
-            car = Car.objects.get(uuid=car_uuid)
+            car = Car.objects.select_related('owner').get(uuid=car_uuid)
         except Car.DoesNotExist:
             raise NotFound()
+
+        if car.owner == request.user:
+            return Response({'detail': 'Cannot call yourself.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        if Block.exists_between(request.user, car.owner):
+            return Response({'detail': 'You cannot contact this user.'}, status=status.HTTP_403_FORBIDDEN)
 
         channel_id = random_channel_id()
         token_a, token_b = generate_call_tokens(channel_id)
 
         thread, _ = ChatThread.objects.get_or_create(scanner=request.user, car=car)
 
-        call_log = CallLog.objects.create(
+        CallLog.objects.create(
             channel_id=channel_id,
             initiated_by=request.user,
             car=car,
@@ -46,16 +53,20 @@ class CallTokenView(APIView):
         return Response({
             'channel_id': channel_id,
             'token': token_a,
-            'app_id': __import__('django.conf', fromlist=['settings']).settings.AGORA_APP_ID,
+            'app_id': settings.AGORA_APP_ID,
         }, status=status.HTTP_201_CREATED)
 
 
 class CallStatusView(APIView):
     def post(self, request, channel_id):
         try:
-            call = CallLog.objects.get(channel_id=channel_id)
+            call = CallLog.objects.select_related('car__owner', 'initiated_by', 'thread').get(channel_id=channel_id)
         except CallLog.DoesNotExist:
             raise NotFound()
+
+        # Only the two call participants may update the status
+        if request.user != call.initiated_by and request.user != call.car.owner:
+            raise PermissionDenied()
 
         new_status = request.data.get('status')
         valid = [s.value for s in CallLog.Status]

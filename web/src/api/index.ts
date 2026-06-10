@@ -35,6 +35,8 @@ export const getMessages = (threadId: string) =>
   api.get(`/api/chat/${threadId}/messages/`)
 export const sendMessage = (threadId: string, content: string) =>
   api.post(`/api/chat/${threadId}/messages/`, { content })
+export const blockUser = (threadId: string) => api.post(`/api/chat/${threadId}/block/`)
+export const unblockUser = (threadId: string) => api.post(`/api/chat/${threadId}/unblock/`)
 
 // Calls
 export const requestCallToken = (carUuid: string) =>

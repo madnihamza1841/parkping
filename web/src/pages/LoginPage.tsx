@@ -3,7 +3,6 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { login, getProfile } from '../api'
 import { useAuthStore } from '../store/authStore'
 import Spinner from '../components/Spinner'
-import toast from 'react-hot-toast'
 
 export default function LoginPage() {
   const navigate = useNavigate()

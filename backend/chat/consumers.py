@@ -1,7 +1,7 @@
 import json
 from channels.generic.websocket import AsyncWebsocketConsumer
 from channels.db import database_sync_to_async
-from .models import ChatThread, Message
+from .models import ChatThread, Message, Block
 
 
 class ChatConsumer(AsyncWebsocketConsumer):
@@ -36,6 +36,15 @@ class ChatConsumer(AsyncWebsocketConsumer):
             return
 
         user = self.scope['user']
+
+        # Blocked users cannot send — notify only the sender, don't broadcast
+        if await self.is_blocked(user):
+            await self.send(text_data=json.dumps({
+                'error': 'blocked',
+                'detail': 'You cannot contact this user.',
+            }))
+            return
+
         msg = await self.save_message(user, content)
         sender_label = await self.get_sender_label(msg)
 
@@ -45,6 +54,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
             'sender_label': sender_label,
             'content': msg.content,
             'timestamp': msg.timestamp.isoformat(),
+            'is_system': False,
         })
 
     async def chat_message(self, event):
@@ -53,18 +63,24 @@ class ChatConsumer(AsyncWebsocketConsumer):
             'sender_label': event['sender_label'],
             'content': event['content'],
             'timestamp': event['timestamp'],
+            'is_system': event.get('is_system', False),
         }))
 
     @database_sync_to_async
     def get_thread(self, thread_id):
         try:
-            return ChatThread.objects.select_related('car__owner').get(uuid=thread_id)
+            return ChatThread.objects.select_related('car__owner', 'scanner').get(uuid=thread_id)
         except ChatThread.DoesNotExist:
             return None
 
     @database_sync_to_async
     def user_in_thread(self, user, thread):
         return user == thread.scanner or user == thread.car.owner
+
+    @database_sync_to_async
+    def is_blocked(self, user):
+        thread = ChatThread.objects.select_related('car__owner', 'scanner').get(uuid=self.thread_id)
+        return Block.exists_between(user, thread.other_participant(user))
 
     @database_sync_to_async
     def save_message(self, user, content):
