@@ -23,7 +23,7 @@ dependencies:
   riverpod_annotation: ^2.3.5
 
   # QR scanning & generation
-  qr_code_scanner: ^1.0.1
+  mobile_scanner: ^5.1.1
   qr_flutter: ^4.1.0
 
   # Notifications
@@ -39,6 +39,7 @@ dependencies:
   fluttertoast: ^8.2.5
   connectivity_plus: ^6.0.3
   shimmer: ^3.0.0
+  shared_preferences: ^2.2.3
 
   # WebSocket
   web_socket_channel: ^2.4.5

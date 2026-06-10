@@ -12,7 +12,6 @@ class AppTheme {
         useMaterial3: true,
         colorScheme: ColorScheme.fromSeed(
           seedColor: primary,
-          background: background,
           surface: surface,
         ),
         scaffoldBackgroundColor: background,
@@ -39,7 +38,7 @@ class AppTheme {
           ),
           contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         ),
-        cardTheme: CardTheme(
+        cardTheme: CardThemeData(
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(radius),
           ),
